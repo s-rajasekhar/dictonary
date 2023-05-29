@@ -12,6 +12,7 @@
 
 #define FILE_PATH "./words.txt" /* Input File, Can be read from Console, if time permit will add. Not that important. */
 #define ASCII_CHARS 128         /* Considers only first 128 ASCII characters */
+#define QUIT_STRING "!quit"     /* String to exit search looop */
 
 /* Structre to store each item from dictonary */
 typedef struct
@@ -23,6 +24,88 @@ typedef struct
 word_list *head[ASCII_CHARS];    /* Head Pointer */
 word_list *current[ASCII_CHARS]; /* Current Pointer */
 int total_words[ASCII_CHARS];    /* List count */
+
+/*
+This function takes a string and a search pattern
+return 0 if its match
+*/
+int pattern_match(char *str, char *pattern)
+{
+    /* GCC specific call for pattern matching */
+    return fnmatch(pattern, str, 0);
+}
+
+/*
+This function iterates thriugh the list for the attern string
+Takes list pointer and pattern as input, if pattern matched for a specific item, prints it on to the terminal
+*/
+void block_pattern_match(word_list *head, char *pattern)
+{
+    word_list *item = head;
+    /* If item is not null and a valid data pointer */
+    while (item && item->ptr)
+    {
+        /* Call Pattern match on the data */
+        if (pattern_match(item->ptr, pattern) == 0)
+            printf("%s\n", item->ptr);
+        item = item->nxt;
+    }
+}
+
+void find_block_pattern_match(char *pattern, unsigned int block)
+{
+    /* Get the head pointer */
+    word_list *local_head = head[block];
+    /* If atleast a single item is present in the list, check for match */
+    if (total_words[block] > 0)
+    {
+        block_pattern_match(local_head, pattern);
+    }
+}
+
+/*
+This function expects a search string, can be regular expression
+*/
+void list_search_and_print(char *str)
+{
+    if (str[0] == '*' || str[0] == '?')
+    {
+        /* If first character is part of reg expression, we need to go through all the lists */
+        int block = 0;
+        for (; block < ASCII_CHARS; block++)
+        {
+            find_block_pattern_match(str, block);
+        }
+    }
+    else
+    {
+        /* If first character is not a reg exp, get list array index based on the ascii value */
+        find_block_pattern_match(str, str[0]);
+    }
+}
+
+/*
+This function is the main search loop. Will exit on !quit.
+*/
+void search()
+{
+    char search[128] = {0};
+    while (1)
+    {
+        printf("Enter String to search.\n");
+        scanf("%127[^\n]", search); /* Read a string with max length 128 */
+        /* Is it exit string? */
+        if (strncmp(search, QUIT_STRING, strlen(QUIT_STRING)) == 0)
+        {
+            return;
+        }
+        /* Search string */
+        list_search_and_print(search);
+        memset(search, 0, 128);   /* Reset memory */
+        while (getchar() != '\n') /* Clear out terminal */
+            continue;
+    }
+}
 
 /*
     This function takes dictonary item as input
@@ -100,8 +183,9 @@ int main()
                 }
                 token = strtok(NULL, "\n");
             }
-            /* */
             printf("Processed all data.\n");
+            /* Start Search loop */
+            search();
         }
         else
             printf("Empty Dictionary.\n");
