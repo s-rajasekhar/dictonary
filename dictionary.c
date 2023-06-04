@@ -4,11 +4,15 @@
     2. Compiled using GCC, as this uses fnmatch
 */
 
+// #define USE_FNMATC
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
+#ifdef USE_FNMATC
 #include <fnmatch.h>
+#endif
 
 #define FILE_PATH "./words.txt" /* Input File, Can be read from Console, if time permit will add. Not that important. */
 #define ASCII_CHARS 128         /* Considers only first 128 ASCII characters */
@@ -25,14 +29,60 @@ word_list *head[ASCII_CHARS];    /* Head Pointer */
 word_list *current[ASCII_CHARS]; /* Current Pointer */
 int total_words[ASCII_CHARS];    /* List count */
 
+/* Success return 0 else 1*/
+int local_match(char *pattern, char *str)
+{
+    if (pattern[0] == '\0' && str[0] == '\0')
+        return 0; // Match
+
+    /* If both pattern and string are not null at same time its not a match */
+    if (pattern[0] == '\0' || str[0] == '\0')
+        return 1; // Not a match
+
+    /* Handle character match and ? */
+    if (pattern[0] == '?' || pattern[0] == str[0])
+        return local_match(++pattern, ++str);
+
+    /* handle * matching logic */
+    else if (pattern[0] == '*')
+    {
+        if (pattern[1] == '*')
+            return local_match(++pattern, str); /* Consecutive '*', ignore */
+        else if (pattern[1] == '\0')
+            return 0; // Nothing in pattern after *, search is valid
+        else
+        {
+            if (pattern[1] == str[0])
+            {
+                /* If there is a character after *, andit matches current search char
+                increment pattern twice and str once and continue search */
+                pattern += 2;
+                return local_match(pattern, ++str);
+            }
+            else
+            {
+                /* If there is a character after *, and it doesnt matches current search char
+                consider this part of * and increment str */
+                return local_match(pattern, ++str); /* If there is a character after *, */
+            }
+        }
+    }
+
+    return 1; // Not a match
+}
+
 /*
 This function takes a string and a search pattern
 return 0 if its match
 */
 int pattern_match(char *str, char *pattern)
 {
+#if USE_FNMATC
     /* GCC specific call for pattern matching */
     return fnmatch(pattern, str, 0);
+#else
+    return local_match(pattern, str);
+#endif
 }
 
 /*
